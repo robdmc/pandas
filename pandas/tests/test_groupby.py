@@ -824,31 +824,27 @@ class TestGroupBy(tm.TestCase):
         result = df.groupby('date').apply(lambda x: x['time'][x['value'].idxmax()])
         assert_series_equal(result, expected)
 
-    def test_time_field_bug_no_conversion(self):
-        df = pd.DataFrame({
-                'a': 1 * np.ones(10),
-                'b': [datetime.now() for nn in range(10)],
-            })
+    def test_time_field_bug(self):
+        # test a fix for GH issue 11324
 
+        df = pd.DataFrame({'a': 1,'b': [datetime.now() for nn in range(10)]})
 
-        def func(batch):
+        def func_with_no_date(batch):
             return pd.Series({'c': 2})
 
-        dfg = df.groupby(by=['a']).apply(func)
-        self.assertTrue('int' in dfg.dtypes[0].name)
+        def func_with_date(batch):
+            return pd.Series({'c': 2, 'b': datetime(2015, 1, 1)})
 
-    def test_time_field_bug_conversion(self):
-        df = pd.DataFrame({
-                'a': 1 * np.ones(10),
-                'b': [datetime.now() for nn in range(10)],
-            })
+        dfg_no_conversion = df.groupby(by=['a']).apply(func_with_no_date)
+        dfg_no_conversion_expected = pd.DataFrame({'c': 2}, index=[1])
+        dfg_no_conversion_expected.index.name = 'a'
 
+        dfg_conversion = df.groupby(by=['a']).apply(func_with_date)
+        dfg_conversion_expected = pd.DataFrame({'b': datetime(2015, 1, 1), 'c': 2}, index=[1])
+        dfg_conversion_expected.index.name = 'a'
 
-        def func(batch):
-            return pd.Series({'c': 2, 'b': datetime.now()})
-
-        dfg = df.groupby(by=['a']).apply(func)
-        self.assertTrue('datetime' in dfg.dtypes[0].name)
+        self.assert_frame_equal(dfg_no_conversion, dfg_no_conversion_expected)
+        self.assert_frame_equal(dfg_conversion, dfg_conversion_expected)
 
     def test_len(self):
         df = tm.makeTimeDataFrame()
