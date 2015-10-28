@@ -824,6 +824,32 @@ class TestGroupBy(tm.TestCase):
         result = df.groupby('date').apply(lambda x: x['time'][x['value'].idxmax()])
         assert_series_equal(result, expected)
 
+    def test_time_field_bug_no_conversion(self):
+        df = pd.DataFrame({
+                'a': 1 * np.ones(10),
+                'b': [datetime.now() for nn in range(10)],
+            })
+
+
+        def func(batch):
+            return pd.Series({'c': 2})
+
+        dfg = df.groupby(by=['a']).apply(func)
+        self.assertTrue('int' in dfg.dtypes[0].name)
+
+    def test_time_field_bug_conversion(self):
+        df = pd.DataFrame({
+                'a': 1 * np.ones(10),
+                'b': [datetime.now() for nn in range(10)],
+            })
+
+
+        def func(batch):
+            return pd.Series({'c': 2, 'b': datetime.now()})
+
+        dfg = df.groupby(by=['a']).apply(func)
+        self.assertTrue('datetime' in dfg.dtypes[0].name)
+
     def test_len(self):
         df = tm.makeTimeDataFrame()
         grouped = df.groupby([lambda x: x.year,
