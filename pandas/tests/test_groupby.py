@@ -825,7 +825,9 @@ class TestGroupBy(tm.TestCase):
         assert_series_equal(result, expected)
 
     def test_time_field_bug(self):
-        # test a fix for GH issue 11324
+        # Test a fix for the following error related to GH issue 11324
+        # When non-key fields in a group-by dataframe contained time-based fields that
+        # were not returned by the apply function, an exception would be raised.
 
         df = pd.DataFrame({'a': 1,'b': [datetime.now() for nn in range(10)]})
 
